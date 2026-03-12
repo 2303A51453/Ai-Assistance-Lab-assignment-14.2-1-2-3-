@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI‑optimized gallery · dynamic navigation</title>
+  <!-- AI‑driven responsive layout: fluid, touch-friendly, cinematic -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(circle at 20% 30%, #192b36, #0b171f);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 1rem;
+    }
+
+    .gallery-container {
+      max-width: 1200px;
+      width: 100%;
+      background: rgba(18, 30, 38, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      padding: 1.8rem 1.8rem 2.2rem;
+      box-shadow: 0 35px 68px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(210, 230, 245, 0.15) inset;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    /* main title */
+    .gallery-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.5rem;
+    }
+
+    .gallery-header h2 {
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      background: linear-gradient(130deg, #e6f0f8, #b4d6ec);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .gallery-header h2::after {
+      content: "🖼️";
+      font-size: 2rem;
+      filter: drop-shadow(0 2px 4px #00000050);
+    }
+
+    .image-counter {
+      background: #1e3643;
+      border-radius: 60px;
+      padding: 0.4rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #b7d9f0;
+      border: 1px solid #386278;
+      box-shadow: inset 0 1px 3px #00000055, 0 6px 12px #00000030;
+      letter-spacing: 0.3px;
+    }
+
+    /* === main display area (AI responsive) === */
+    .gallery-display {
+      position: relative;
+      width: 100%;
+      border-radius: 2rem;
+      overflow: hidden;
+      box-shadow: 0 20px 40px -10px #00000080, 0 0 0 1px rgba(255, 255, 255, 0.1);
+      background: #0e1b24;
+      aspect-ratio: 16 / 9;  /* cinematic ratio, adapts on mobile */
+      transition: aspect-ratio 0.2s;
+    }
+
+    /* dynamic image loads via JS */
+    .gallery-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;         /* covers area without distortion, AI: best for varied images */
+      object-position: center;
+      display: block;
+      transition: opacity 0.25s ease-in-out;
+      background-color: #1d3341;  /* placeholder while loading */
+      image-rendering: high-quality;
+    }
+
+    /* navigation buttons (absolute + responsive) */
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(10, 25, 35, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      width: clamp(2.8rem, 10vw, 4.4rem);
+      height: clamp(2.8rem, 10vw, 4.4rem);
+      border-radius: 60px;
+      font-size: clamp(1.5rem, 6vw, 2.4rem);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 8px 18px #00000055;
+      line-height: 1;
+      z-index: 10;
+    }
+
+    .nav-btn:hover {
+      background: #1e4e6c;
+      border-color: #b3defa;
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 14px 24px #00000077;
+    }
+
+    .nav-btn:active {
+      transform: translateY(-50%) scale(0.97);
+    }
+
+    .prev-btn {
+      left: 1.2rem;
+    }
+
+    .next-btn {
+      right: 1.2rem;
+    }
+
+    /* image title / caption (AI: contextual overlay) */
+    .image-caption {
+      position: absolute;
+      bottom: 1.2rem;
+      left: 1.8rem;
+      right: 1.8rem;
+      background: linear-gradient(90deg, rgba(0, 15, 25, 0.85) 0%, rgba(20, 50, 70, 0.75) 100%);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      padding: 0.7rem 1.5rem;
+      border-radius: 60px;
+      color: #eaf2f9;
+      font-weight: 450;
+      font-size: clamp(0.9rem, 3vw, 1.2rem);
+      border: 1px solid #8ab3cf40;
+      width: fit-content;
+      max-width: 80%;
+      text-shadow: 0 2px 4px black;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* thumbnail strip (AI optimized: horizontal scroll on mobile, grid on large) */
+    .thumbnail-strip {
+      margin-top: 1.8rem;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 0.8rem;
+      overflow-x: auto;
+      padding: 0.6rem 0.3rem 1rem 0.3rem;
+      scrollbar-width: thin;
+      scrollbar-color: #3c677b #12242e;
+      border-radius: 20px;
+      cursor: grab;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .thumbnail-strip::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .thumbnail-strip::-webkit-scrollbar-track {
+      background: #1d3341;
+      border-radius: 20px;
+    }
+
+    .thumbnail-strip::-webkit-scrollbar-thumb {
+      background: #3f6f8c;
+      border-radius: 20px;
+      border: 1px solid #86aec9;
+    }
+
+    .thumbnail-item {
+      flex: 0 0 auto;
+      width: 90px;
+      height: 90px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 3px solid transparent;
+      transition: 0.2s;
+      box-shadow: 0 8px 14px #00000055;
+      background: #203a48;
+      opacity: 0.75;
+      transition: all 0.15s ease;
+    }
+
+    /* active thumbnail glows */
+    .thumbnail-item.active {
+      border-color: #ffd966;
+      opacity: 1;
+      transform: scale(1.05);
+      box-shadow: 0 0 18px #f7c948cc;
+    }
+
+    .thumbnail-item:hover {
+      opacity: 1;
+      border-color: #b0dafc;
+      transform: scale(1.02);
+    }
+
+    .thumbnail-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;  /* so click goes to parent div */
+    }
+
+    /* responsive breakpoints (AI fine‑tuned) */
+    @media (max-width: 640px) {
+      .gallery-container {
+        padding: 1rem 1rem 1.5rem;
+        border-radius: 2rem;
+      }
+
+      .gallery-display {
+        aspect-ratio: 4 / 3;   /* better for small screens */
+      }
+
+      .thumbnail-item {
+        width: 70px;
+        height: 70px;
+      }
+
+      .image-caption {
+        bottom: 0.8rem;
+        left: 1rem;
+        font-size: 0.8rem;
+        padding: 0.4rem 1rem;
+      }
+
+      .nav-btn {
+        width: 2.6rem;
+        height: 2.6rem;
+        font-size: 1.8rem;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .thumbnail-item {
+        width: 55px;
+        height: 55px;
+      }
+      .gallery-header h2 {
+        font-size: 1.4rem;
+      }
+    }
+
+    /* loading skeleton (AI subtle) */
+    .gallery-image.loading {
+      filter: blur(6px);
+      opacity: 0.6;
+    }
+
+    footer {
+      margin-top: 1.5rem;
+      text-align: center;
+      color: #779bb3;
+      font-size: 0.8rem;
+      border-top: 1px dashed #315d75;
+      padding-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="gallery-container">
+    <div class="gallery-header">
+      <h2>Dynamic gallery · JS loaded</h2>
+      <span class="image-counter" id="counterDisplay">1 / 6</span>
+    </div>
+
+    <!-- main display with navigation -->
+    <div class="gallery-display">
+      <img id="mainImage" class="gallery-image" src="https://picsum.photos/id/1043/1200/800" alt="gallery image" loading="lazy">
+      <!-- prev / next buttons -->
+      <button class="nav-btn prev-btn" id="prevBtn" aria-label="Previous image">←</button>
+      <button class="nav-btn next-btn" id="nextBtn" aria-label="Next image">→</button>
+      <!-- dynamic caption -->
+      <div class="image-caption" id="caption">Driftwood, by G. Balme</div>
+    </div>
+
+    <!-- thumbnail strip (will be populated by JS) -->
+    <div class="thumbnail-strip" id="thumbnailStrip"></div>
+    <footer>⚡ AI responsiveness · fluid layout · touch ready · next/prev + thumbnails</footer>
+  </div>
+
+  <script>
+    (function() {
+      // ----- AI curated image dataset (high-quality, varied subjects, all from picsum with known author/caption) -----
+      const galleryData = [
+        {
+          id: '1043',
+          url: 'https://picsum.photos/id/1043/1200/800',
+          thumb: 'https://picsum.photos/id/1043/120/120',
+          caption: '🏔️ Driftwood, by G. Balme'
+        },
+        {
+          id: '106',
+          url: 'https://picsum.photos/id/106/1200/800',
+          thumb: 'https://picsum.photos/id/106/120/120',
+          caption: '🌲 Lofoten mountains, by C. Dubler'
+        },
+        {
+          id: '15',
+          url: 'https://picsum.photos/id/15/1200/800',
+          thumb: 'https://picsum.photos/id/15/120/120',
+          caption: '🍂 Leaves & moss, by T. West'
+        },
+        {
+          id: '16',
+          url: 'https://picsum.photos/id/16/1200/800',
+          thumb: 'https://picsum.photos/id/16/120/120',
+          caption: '🛤️ Coastal path, by P. Jarvis'
+        },
+        {
+          id: '30',
+          url: 'https://picsum.photos/id/30/1200/800',
+          thumb: 'https://picsum.photos/id/30/120/120',
+          caption: '☕ Cafe vibe, by A. Rose'
+        },
+        {
+          id: '42',
+          url: 'https://picsum.photos/id/42/1200/800',
+          thumb: 'https://picsum.photos/id/42/120/120',
+          caption: '🏛️ Florence duomo, by M. Smith'
+        }
+      ];
+
+      // DOM elements
+      const mainImage = document.getElementById('mainImage');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const captionEl = document.getElementById('caption');
+      const counterDisplay = document.getElementById('counterDisplay');
+      const thumbnailStrip = document.getElementById('thumbnailStrip');
+
+      let currentIndex = 0;          // zero-based index
+      const totalImages = galleryData.length;
+
+      // --- function to update main display and active thumbnail ---
+      function updateGallery(index) {
+        // wrap index gracefully (infinite loop)
+        if (index < 0) index = totalImages - 1;
+        if (index >= totalImages) index = 0;
+        currentIndex = index;
+
+        const item = galleryData[currentIndex];
+
+        // set main image with fade effect (optional small class)
+        mainImage.style.opacity = '0.7';
+        mainImage.src = item.url;
+        captionEl.textContent = item.caption;
+        counterDisplay.textContent = `${currentIndex+1} / ${totalImages}`;
+
+        // wait a tiny bit to simulate smooth load (then reset opacity)
+        setTimeout(() => {
+          mainImage.style.opacity = '1';
+        }, 30);
+
+        // update active class on thumbnails
+        const thumbItems = document.querySelectorAll('.thumbnail-item');
+        thumbItems.forEach((thumb, idx) => {
+          if (idx === currentIndex) {
+            thumb.classList.add('active');
+            // optional: scroll thumbnail into view (if needed, but UX friendly)
+            thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          } else {
+            thumb.classList.remove('active');
+          }
+        });
+      }
+
+      // --- build thumbnails dynamically using JavaScript (task requirement) ---
+      function buildThumbnails() {
+        thumbnailStrip.innerHTML = ''; // clear if any
+        galleryData.forEach((item, idx) => {
+          const thumbDiv = document.createElement('div');
+          thumbDiv.className = 'thumbnail-item' + (idx === currentIndex ? ' active' : '');
+          thumbDiv.setAttribute('data-index', idx);
+          thumbDiv.setAttribute('role', 'button');
+          thumbDiv.setAttribute('tabindex', '0');
+          thumbDiv.setAttribute('aria-label', `go to image ${idx+1}: ${item.caption}`);
+
+          const thumbImg = document.createElement('img');
+          thumbImg.src = item.thumb;
+          thumbImg.alt = `thumbnail ${idx+1}`;
+          thumbImg.className = 'thumbnail-img';
+          thumbImg.loading = 'lazy';
+
+          thumbDiv.appendChild(thumbImg);
+
+          // click event on thumbnail
+          thumbDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newIndex = parseInt(thumbDiv.getAttribute('data-index'), 10);
+            if (!isNaN(newIndex)) {
+              updateGallery(newIndex);
+            }
+          });
+
+          // keyboard / enter support (usability)
+          thumbDiv.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              thumbDiv.click();
+            }
+          });
+
+          thumbnailStrip.appendChild(thumbDiv);
+        });
+      }
+
+      // --- event listeners for prev/next ---
+      prevBtn.addEventListener('click', () => {
+        updateGallery(currentIndex - 1);
+      });
+
+      nextBtn.addEventListener('click', () => {
+        updateGallery(currentIndex + 1);
+      });
+
+      // optional: keyboard left/right arrow (AI accessibility)
+      window.addEventListener('keydown', (e) => {
+        // only if the gallery is likely in view (optional, but nice)
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();  // avoid page scroll
+          updateGallery(currentIndex - 1);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          updateGallery(currentIndex + 1);
+        }
+      });
+
+      // --- initial load (first image, thumbnails built) ---
+      buildThumbnails();
+      // ensure main image matches currentIndex (0)
+      mainImage.src = galleryData[0].url;
+      captionEl.textContent = galleryData[0].caption;
+      counterDisplay.textContent = `1 / ${totalImages}`;
+
+      // handle image loading smoothness (no broken images fallback, but picsum always works)
+      mainImage.addEventListener('load', () => {
+        mainImage.style.opacity = '1';
+      });
+      // tiny preload for first image (already set)
+
+      // additional: ensure active thumbnail is visible after build (but first is active)
+      const firstThumb = document.querySelector('.thumbnail-item.active');
+      if (firstThumb) {
+        firstThumb.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+      }
+
+      // if user clicks on image (maybe not needed, but nothing)
+    })();
+  </script>
+</body>
+</html>
